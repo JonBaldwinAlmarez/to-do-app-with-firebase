@@ -73,7 +73,7 @@ input {
 }
 
 input.error {
-	border: red;
+	border: 2px solid red;
 }
 
 #error-message {
