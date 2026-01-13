@@ -19,11 +19,16 @@ const toDoListInDb = ref(database, "toDoList");
 const input_field = document.getElementById("input-field");
 const add_button = document.getElementById("add-button");
 const to_do_list = document.getElementById("todo-list");
+const errorMessage = document.getElementById("error-message");
+
+let existingTasks = []; // <-- this will store all task values
 
 onValue(toDoListInDb, function (snapshot) {
 	if (snapshot.exists()) {
 		let itemsArray = Object.entries(snapshot.val() || {});
 		clearToDoList(); // Clear the list before appending items
+
+		existingTasks = []; // reset the array
 
 		for (let i = 0; i < itemsArray.length; i++) {
 			let currentItem = itemsArray[i];
@@ -31,17 +36,50 @@ onValue(toDoListInDb, function (snapshot) {
 			let currentItemValue = currentItem[1];
 
 			appendToDoList(currentItem);
+			// Add task value to local array
+			existingTasks.push(currentItemValue.toLowerCase().trim());
 		}
+		// console.log(existingTasks);
 	} else {
 		to_do_list.innerHTML = "No To do";
+		existingTasks = []; // reset the array if no tasks
 	}
 });
 
 add_button.addEventListener("click", () => {
-	let inputFieldValue = input_field.value;
-	push(toDoListInDb, inputFieldValue);
+	let inputFieldValue = input_field.value.trim(); // trim whitespace
+	let normalizedInput = inputFieldValue.toLowerCase(); // normalize input for comparison
+
+	input_field.classList.remove("error"); // remove error styling
+	errorMessage.textContent = ""; // clear previous error message
+
+	if (!inputFieldValue) {
+		errorMessage.textContent = "Please enter a task.";
+		return;
+	}
+	if (existingTasks.includes(normalizedInput)) {
+		errorMessage.textContent = "This task already exists.";
+
+		input_field.classList.add("error"); // add error styling
+		autoClearError();
+		clearInputField();
+
+		return;
+	}
+
+	push(toDoListInDb, inputFieldValue); // Push the original input value
 	clearInputField();
+
+	// Clear any previous error
+	errorMessage.textContent = "";
 });
+
+function autoClearError() {
+	setTimeout(() => {
+		errorMessage.textContent = "";
+		input_field.classList.remove("error");
+	}, 3000); // Clears after 3 seconds
+}
 
 function clearToDoList() {
 	to_do_list.innerHTML = "";
@@ -67,7 +105,7 @@ function appendToDoList(item) {
 
 function deleteItem(itemID) {
 	let exactLocationOfItemInDb = ref(database, `toDoList/${itemID}`);
-	exactLocationOfItemInDb.addEventListener("dbclick", function () {
+	exactLocationOfItemInDb.addEventListener("dblclick", function () {
 		remove(exactLocationOfItemInDb);
 	});
 }
